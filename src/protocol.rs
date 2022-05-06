@@ -13,23 +13,6 @@ pub enum PixelflutCommand {
 }
 
 impl PixelflutCommand {
-    // /// Write yourself to the stream regardless if it's just a buffer or a tcpstream
-    // #[inline(always)]
-    // pub async fn write_to_stream(&self, stream: &mut BufStream<TcpStream>) -> Result<()> {
-    //     match self {
-    //         PixelflutCommand::Size => stream.write_all("SIZE\n".as_bytes()),
-    //         PixelflutCommand::SetPixel { x, y, rgb } => {
-    //             stream
-    //                 .write_all(format!("PX {x} {y} {rgb:06x}\n").as_bytes())
-    //         }
-    //         PixelflutCommand::SetPixelWithAlpha { x, y, rgba } => {
-    //             stream
-    //                 .write_all(format!("PX {x} {y} {rgba:08x}\n").as_bytes())
-    //         }
-    //         PixelflutCommand::GetPixel { .. } => Ok(()),
-    //     }
-    // }
-
     #[inline(always)]
     pub fn write_to_vec(&self, vec: &mut Vec<u8>) {
         match self {

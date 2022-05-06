@@ -27,14 +27,14 @@ impl Goal {
             image = image.fliph();
         }
 
-        let mut draw_commands = image_helpers::draw_image(&image, image_x, image_y);
-        draw_commands.extend_from_slice(&image_helpers::draw_rect(
-            hitbox_x,
-            hitbox_y,
-            HITBOX_WIDTH,
-            HITBOX_HEIGHT,
-            0xff000000,
-        ));
+        let draw_commands = image_helpers::draw_image(&image, image_x, image_y);
+        // draw_commands.extend_from_slice(&image_helpers::draw_rect(
+        //     hitbox_x,
+        //     hitbox_y,
+        //     HITBOX_WIDTH,
+        //     HITBOX_HEIGHT,
+        //     0xff000000,
+        // ));
 
         Goal {
             draw_commands,

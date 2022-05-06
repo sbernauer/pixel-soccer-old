@@ -1,10 +1,12 @@
 use args::Args;
+use ball::Ball;
 use clap::StructOpt;
 use goal::Goal;
 use network::Client;
 use tokio::io::Result;
 
 mod args;
+mod ball;
 mod goal;
 mod image_helpers;
 mod network;
@@ -31,6 +33,16 @@ async fn main() -> Result<()> {
         let goal = Goal::right(screen_width, screen_height);
         loop {
             goal.draw(&mut client).await.unwrap();
+        }
+    }));
+
+    let server_address = args.server_address.clone();
+    threads.push(tokio::spawn(async move {
+        let (mut client, screen_width, screen_height) = setup_thread(&server_address).await;
+        let mut ball = Ball::new(screen_width, screen_height);
+        loop {
+            ball.tick();
+            ball.draw(&mut client).await.unwrap();
         }
     }));
 

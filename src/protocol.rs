@@ -1,3 +1,5 @@
+use async_trait::async_trait;
+
 pub enum PixelflutCommand {
     Size,
     /// Layout of rgb: 8 bits padding, 8 bits r, 8 bits g, 8 bits green
@@ -23,4 +25,9 @@ impl PixelflutCommand {
             PixelflutCommand::GetPixel { .. } => (),
         }
     }
+}
+
+#[async_trait]
+pub trait Draw {
+    async fn draw(&self, client: &mut crate::network::Client) -> std::io::Result<()>;
 }

@@ -1,6 +1,7 @@
+use async_trait::async_trait;
 use tokio::io::Result;
 
-use crate::image_helpers;
+use crate::{image_helpers, protocol::Draw};
 use image::io::Reader as ImageReader;
 
 pub struct Goal {
@@ -60,8 +61,11 @@ impl Goal {
 
         Goal::new(image_x, image_y, hitbox_x, hitbox_y, true)
     }
+}
 
-    pub async fn draw(&self, client: &mut crate::network::Client) -> Result<()> {
+#[async_trait]
+impl Draw for Goal {
+    async fn draw(&self, client: &mut crate::network::Client) -> Result<()> {
         client.write_bytes(&self.draw_commands).await
     }
 }

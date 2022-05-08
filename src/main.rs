@@ -1,9 +1,14 @@
+use std::sync::Arc;
+
 use args::Args;
 use ball::Ball;
 use clap::StructOpt;
 use goal::Goal;
 use network::Client;
 use tokio::io::Result;
+use tokio::task::JoinHandle;
+
+use crate::protocol::Draw;
 
 mod args;
 mod ball;
@@ -16,35 +21,17 @@ mod protocol;
 async fn main() -> Result<()> {
     let args = Args::parse();
 
-    let mut threads = vec![];
+    let mut client = Client::new(&args.server_address).await.unwrap();
+    let (screen_width, screen_height) = client.read_screen_size().await.unwrap();
 
-    let server_address = args.server_address.clone();
-    threads.push(tokio::spawn(async move {
-        let (mut client, _, screen_height) = setup_thread(&server_address).await;
-        let goal = Goal::left(screen_height);
-        loop {
-            goal.draw(&mut client).await.unwrap();
-        }
-    }));
+    let ball = Arc::new(Ball::new(screen_width, screen_height).await);
+    let goal_left = Arc::new(Goal::left(screen_height));
+    let goal_right = Arc::new(Goal::right(screen_width, screen_height));
 
-    let server_address = args.server_address.clone();
-    threads.push(tokio::spawn(async move {
-        let (mut client, screen_width, screen_height) = setup_thread(&server_address).await;
-        let goal = Goal::right(screen_width, screen_height);
-        loop {
-            goal.draw(&mut client).await.unwrap();
-        }
-    }));
-
-    let server_address = args.server_address.clone();
-    threads.push(tokio::spawn(async move {
-        let (mut client, screen_width, screen_height) = setup_thread(&server_address).await;
-        let mut ball = Ball::new(screen_width, screen_height);
-        loop {
-            ball.tick();
-            ball.draw(&mut client).await.unwrap();
-        }
-    }));
+    let mut threads = vec![ball::start_main_thread(Arc::clone(&ball), 30)];
+    threads.extend(start_drawing(ball, &args.server_address, 10).await);
+    threads.extend(start_drawing(goal_left, &args.server_address, 1).await);
+    threads.extend(start_drawing(goal_right, &args.server_address, 1).await);
 
     for thread in threads {
         thread.await?;
@@ -53,9 +40,24 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn setup_thread(server_address: &str) -> (Client, u16, u16) {
-    let mut client = Client::new(server_address).await.unwrap();
-    let (screen_width, screen_height): (u16, u16) = client.read_screen_size().await.unwrap();
+async fn start_drawing(
+    object: Arc<impl Draw + std::marker::Send + std::marker::Sync + 'static>,
+    server_address: &str,
+    num_threads: u16,
+) -> Vec<JoinHandle<()>> {
+    let mut threads = vec![];
 
-    (client, screen_width, screen_height)
+    for _ in 0..num_threads {
+        let mut client = Client::new(server_address).await.unwrap();
+        let object_clone = object.clone();
+
+        let thread = tokio::spawn(async move {
+            loop {
+                object_clone.draw(&mut client).await.unwrap();
+            }
+        });
+        threads.push(thread);
+    }
+
+    threads
 }

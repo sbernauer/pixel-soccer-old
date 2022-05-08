@@ -3,7 +3,8 @@ use crate::{network::AVG_PIXELS_PER_COMMAND, protocol::PixelflutCommand};
 use image::{DynamicImage, GenericImageView};
 
 pub fn draw_rect(x_offset: u16, y_offset: u16, width: u16, height: u16, rgb: u32) -> Vec<u8> {
-    let mut draw_command_bytes = Vec::with_capacity(100 * 100);
+    let mut draw_command_bytes =
+        Vec::with_capacity(width as usize * height as usize * AVG_PIXELS_PER_COMMAND as usize);
     for x in x_offset..x_offset + width {
         for y in y_offset..y_offset + height {
             PixelflutCommand::SetPixel { x, y, rgb }.write_to_vec(&mut draw_command_bytes);

@@ -122,7 +122,19 @@ pub fn start_main_thread(ball: Arc<Ball>, fps: u16) -> JoinHandle<()> {
             ball.center_y.store(new_center_y, Release);
             ball.dir.store(new_dir, Release);
 
-            let new_draw_commands = ball.get_draw_commands();
+            let mut new_draw_commands = ball.get_draw_commands();
+            let line_coordinates = image_helpers::coordinates_on_line_with_dir_and_skip_offset(
+                new_center_x,
+                new_center_y,
+                new_dir,
+                200_f32,
+                ball.radius,
+            );
+
+            new_draw_commands.extend(image_helpers::draw_coordinates(
+                line_coordinates,
+                0xff00ff00,
+            ));
             *ball.draw_commands.write().await = new_draw_commands;
         }
     })

@@ -1,4 +1,4 @@
-use crate::{network::AVG_PIXELS_PER_COMMAND, protocol::PixelflutCommand};
+use crate::{client::AVG_PIXELS_PER_COMMAND, protocol::PixelflutCommand};
 
 use image::{DynamicImage, GenericImageView};
 

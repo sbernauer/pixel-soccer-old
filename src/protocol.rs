@@ -22,12 +22,14 @@ impl PixelflutCommand {
             PixelflutCommand::SetPixel { x, y, rgb } => {
                 vec.extend_from_slice(format!("PX {x} {y} {rgb:06x}\n").as_bytes())
             }
-            PixelflutCommand::GetPixel { .. } => (),
+            PixelflutCommand::GetPixel { x, y } => {
+                vec.extend_from_slice(format!("PX {x} {y}\n").as_bytes())
+            }
         }
     }
 }
 
 #[async_trait]
 pub trait Draw {
-    async fn draw(&self, client: &mut crate::network::Client) -> std::io::Result<()>;
+    async fn draw(&self, client: &mut crate::client::Client) -> std::io::Result<()>;
 }

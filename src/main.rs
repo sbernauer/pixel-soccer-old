@@ -3,8 +3,8 @@ use std::sync::Arc;
 use args::Args;
 use ball::Ball;
 use clap::StructOpt;
+use client::Client;
 use goal::Goal;
-use network::Client;
 use tokio::io::Result;
 use tokio::task::JoinHandle;
 
@@ -12,9 +12,9 @@ use crate::protocol::Draw;
 
 mod args;
 mod ball;
+mod client;
 mod goal;
 mod image_helpers;
-mod network;
 mod protocol;
 
 #[tokio::main]
@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
     let goal_left = Arc::new(Goal::left(screen_height));
     let goal_right = Arc::new(Goal::right(screen_width, screen_height));
 
-    let mut threads = vec![ball::start_main_thread(Arc::clone(&ball), 30)];
+    let mut threads = vec![ball::start_main_thread(Arc::clone(&ball), client, 10)];
     threads.extend(start_drawing(ball, &args.server_address, 5).await);
     threads.extend(start_drawing(goal_left, &args.server_address, 1).await);
     threads.extend(start_drawing(goal_right, &args.server_address, 1).await);

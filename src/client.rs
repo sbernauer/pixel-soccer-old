@@ -1,6 +1,6 @@
 use std::io::{Error, ErrorKind};
 
-use lazy_static::lazy_static;
+use lazy_static::{__Deref, lazy_static};
 use regex::Regex;
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufStream, Result},
@@ -13,8 +13,11 @@ pub const AVG_PIXELS_PER_COMMAND: usize = "PX 123 123 ffffff\n".len();
 const READ_BUFFER_SIZE: usize = 64;
 
 lazy_static! {
+    // Thanks to https://github.com/timvisee/pixelpwnr/blob/0d83b3e0b54448a59844e330a36f2e4b0e19e611/src/pix/client.rs#L19
     pub static ref SIZE_COMMAND_REGEX: Regex =
         Regex::new(r"^(?i)\s*SIZE\s+([[:digit:]]+)\s+([[:digit:]]+)\s*$").unwrap();
+        pub static ref READ_PIXEL_COMMAND_REGEX: Regex = Regex::new(r"PX [0-9]+ [0-9]+ ([0-9a-fA-F]+)\s").unwrap();
+        // pub static ref READ_PIXEL_COMMAND_REGEX: Regex = Regex::new(r"^PX [[:digit:]]+ [[:digit:]]+ ([0-9a-f]{6}])\s$").unwrap();
 }
 
 pub struct Client {
@@ -35,10 +38,8 @@ impl Client {
         Ok(())
     }
 
+    /// Slow, don't use for performant drawing
     pub async fn write_command(&mut self, cmd: &PixelflutCommand) -> Result<()> {
-        // let mut bytes = Vec::new();
-        // cmd.write_to_vec(&mut bytes);
-        // self.stream.write_all(&bytes).await?;
         match cmd {
             PixelflutCommand::Size => self.stream.write_all("SIZE\n".as_bytes()).await?,
             PixelflutCommand::SetPixel { x, y, rgb } => {
@@ -46,7 +47,11 @@ impl Client {
                     .write_all(format!("PX {x} {y} {rgb:06x}\n").as_bytes())
                     .await?
             }
-            PixelflutCommand::GetPixel { .. } => (),
+            PixelflutCommand::GetPixel { x, y } => {
+                self.stream
+                    .write_all(format!("PX {x} {y}\n").as_bytes())
+                    .await?
+            }
         }
 
         self.stream.flush().await?;
@@ -54,6 +59,7 @@ impl Client {
         Ok(())
     }
 
+    /// Slow, don't use for performant drawing
     pub async fn write_command_and_read(&mut self, cmd: &PixelflutCommand) -> Result<String> {
         self.write_command(cmd).await?;
         let mut buffer = String::with_capacity(READ_BUFFER_SIZE);
@@ -80,5 +86,36 @@ impl Client {
                 "Failed to parse screen size, received malformed data",
             )),
         }
+    }
+
+    pub async fn get_color_of_pixels(&mut self, pixels: &Vec<(u16, u16)>) -> Result<Vec<u32>> {
+        let num_pixels = pixels.len();
+        let mut request = Vec::new();
+        let mut result: Vec<u32> = Vec::new();
+
+        for (x, y) in pixels {
+            PixelflutCommand::GetPixel { x: *x, y: *y }.write_to_vec(&mut request);
+        }
+
+        // Ask for pixel colors
+        self.write_bytes(&request).await?;
+
+        // Read response
+        let mut buffer = String::with_capacity(READ_BUFFER_SIZE);
+        for _ in 0..num_pixels {
+            let read = self.stream.read_line(&mut buffer).await?;
+            // if read == 0 {
+            //     break;
+            // }
+
+            let cap = READ_PIXEL_COMMAND_REGEX.captures(&buffer);
+            if let Some(cap) = cap {
+                if let Ok(rgb) = u32::from_str_radix(cap.get(1).unwrap().as_str(), 16) {
+                    result.push(rgb);
+                }
+            }
+        }
+
+        Ok(result)
     }
 }

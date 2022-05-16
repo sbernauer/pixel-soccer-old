@@ -65,7 +65,7 @@ impl Goal {
 
 #[async_trait]
 impl Draw for Goal {
-    async fn draw(&self, client: &mut crate::network::Client) -> Result<()> {
+    async fn draw(&self, client: &mut crate::client::Client) -> Result<()> {
         client.write_bytes(&self.draw_commands).await
     }
 }
